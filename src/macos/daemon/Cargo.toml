@@ -23,7 +23,8 @@ ignore = "0.4"
 p256 = { version = "0.13", features = ["ecdsa", "pkcs8", "pem"] }
 # Randomness for generating signing keys.
 rand_core = { version = "0.6", features = ["getrandom"] }
-# The SHA-256 algorithm identifier that ECDSA certificates name (only the "oid" feature is needed).
+# The SHA-256 algorithm identifier that ECDSA certificates name (only the "oid" feature is needed). It stays on 0.10,
+# the digest generation p256 0.13 and x509-cert 0.2 are built on; sha2 0.11's identifier does not satisfy them.
 sha2 = { version = "0.10", features = ["oid"] }
 # X.509 certificates for zazz authorities: building, parsing and chain checks.
 x509-cert = { version = "0.2", features = ["builder", "pem"] }
@@ -81,7 +82,7 @@ tree-sitter-bash = "0.25"
 # Dart grammar for the terse view in tests (release builds load it as a language module).
 tree-sitter-dart = "0.3"
 # Go grammar for the terse view in tests (release builds load it as a language module).
-tree-sitter-go = "0.23"
+tree-sitter-go = "0.25"
 # Java grammar for the terse view in tests (release builds load it as a language module).
 tree-sitter-java = "0.23"
 # C++ grammar for the terse view in tests (release builds load it as a language module).

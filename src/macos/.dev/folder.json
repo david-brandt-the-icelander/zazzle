@@ -12,7 +12,7 @@
       "boundaries": [
         "A grouping folder: the tools share settings, not code; only the zazz-script crates are shared (the daemon uses packaging and engine, runner uses engine).",
         "The Cargo workspace (Cargo.toml, Cargo.lock, rustfmt.toml, rust-style.md) covers the Rust folders; the release profile uses link-time optimization, stripped symbols and one codegen unit. ai-agent is left out of release workspace builds (`--exclude ai-agent`) and built by release/tools.sh.",
-        "zazz-script/runner embeds wasmtime and sets its own minimum Rust version (1.97); the rest of the workspace keeps 1.85.",
+        "zazz-script/runner embeds wasmtime and sets its own minimum Rust version (1.97); the rest of the workspace keeps 1.89.",
         "lempel-ziv-finite-state-entropy-compression/ is changed only by copying a new version from the lzfse-compression repository.",
         "Build output (target/, bin/, obj/, out/, build/) is never committed."
       ],
@@ -33,10 +33,6 @@
         {
           "path": "src/macos/.gitignore",
           "symbol": "target/"
-        },
-        {
-          "path": ".github/workflows/release.yml",
-          "symbol": "linux"
         }
       ],
       "links": [
