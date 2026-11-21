@@ -497,6 +497,9 @@ fn plan_client(env: &Env, opts: &Opts, c: Client, routes: &mut Routes) -> Result
 
 // Returns the first port from 8809 that no route uses and nothing listens on.
 fn free_port(routes: &Routes) -> u16 {
+    // Probing binds the port for a moment, so concurrent callers take turns instead of seeing each other's probe as a listener.
+    static PROBING: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _turn = PROBING.lock().unwrap_or_else(|e| e.into_inner());
     (FIRST_PORT..u16::MAX)
         .find(|p| {
             !routes.iter().any(|(q, _)| q == p) && std::net::TcpListener::bind(("127.0.0.1", *p)).is_ok()
