@@ -40,11 +40,25 @@ pub fn set_test_log(p: &Path) {
     TEST_LOG.with(|t| *t.borrow_mut() = Some(p.to_path_buf()));
 }
 
+// Returns this test thread's own log path, if it set one; an empty path means no log.
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn test_log() -> Option<Option<PathBuf>> {
+    TEST_LOG.with(|t| t.borrow().clone()).map(|p| Some(p).filter(|p| !p.as_os_str().is_empty()))
+}
+
+// Returns whether this test thread may write entries: it holds the environment lock or has its own log.
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn test_may_log() -> bool {
+    crate::testutil::env_held() || TEST_LOG.with(|t| t.borrow().is_some())
+}
+
 // Returns the log file: $ZAZZLE_ACTIVITY_LOG, else ~/.zazzle/activity.log; tests log nowhere unless they set the variable.
 pub fn path() -> Option<PathBuf> {
     #[cfg(test)]
-    if let Some(p) = TEST_LOG.with(|t| t.borrow().clone()) {
-        return (!p.as_os_str().is_empty()).then_some(p);
+    if let Some(p) = test_log() {
+        return p;
     }
     if let Some(p) = std::env::var_os("ZAZZLE_ACTIVITY_LOG") {
         return (!p.is_empty()).then(|| PathBuf::from(p));
@@ -65,7 +79,7 @@ pub fn record(mut entry: Value) {
     let Some(p) = path() else { return };
     // Tests write only while their thread holds the environment lock, since the variable is process-wide.
     #[cfg(test)]
-    if !crate::testutil::env_held() && !TEST_LOG.with(|t| t.borrow().is_some()) {
+    if !test_may_log() {
         return;
     }
     entry["ts"] = json!(now());
