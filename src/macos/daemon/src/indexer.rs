@@ -37,13 +37,13 @@ fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
 }
 
-// Finds the indexer executable: $ZAZZLE_INDEXER, else beside this executable, else on PATH.
-fn find_exe() -> Option<PathBuf> {
+// Finds the indexer executable: $ZAZZLE_INDEXER, else beside this executable, else in a folder of `path` (a PATH value).
+fn find_exe(path: &std::ffi::OsStr) -> Option<PathBuf> {
     if let Some(p) = env("ZAZZLE_INDEXER") {
         return Some(PathBuf::from(p));
     }
     let beside = std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.join(BINARY)));
-    let on_path = std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+    let on_path = std::env::split_paths(path)
         .map(|d| d.join(BINARY))
         .collect::<Vec<_>>();
     beside.into_iter().chain(on_path).find(|p| p.is_file())
@@ -128,7 +128,12 @@ fn result_text(msg: &Value) -> Result<String, String> {
 impl Indexer {
     // Finds the indexer and its state directory, or says why there is none.
     pub fn locate() -> Result<Indexer, String> {
-        let exe = find_exe().ok_or("csharp-indexer is not installed (beside the daemon or on PATH)")?;
+        Indexer::locate_in(&std::env::var_os("PATH").unwrap_or_default())
+    }
+
+    // Finds the indexer as locate does, searching `path` instead of $PATH (tests use it, since changing PATH would hide git from tests running beside them).
+    fn locate_in(path: &std::ffi::OsStr) -> Result<Indexer, String> {
+        let exe = find_exe(path).ok_or("csharp-indexer is not installed (beside the daemon or on PATH)")?;
         let state = state_dir().ok_or("HOME is not set")?;
         Ok(Indexer { exe, state })
     }
@@ -622,7 +627,7 @@ pub mod tests {
     #[test]
     fn test_locate() {
         let _g = env_lock();
-        let saved: Vec<_> = ["ZAZZLE_INDEXER", "ZAZZLE_INDEXER_STATE_DIR", "XDG_STATE_HOME", "PATH"]
+        let saved: Vec<_> = ["ZAZZLE_INDEXER", "ZAZZLE_INDEXER_STATE_DIR", "XDG_STATE_HOME"]
             .iter()
             .map(|k| (*k, std::env::var_os(k)))
             .collect();
@@ -636,9 +641,8 @@ pub mod tests {
             assert_eq!(state, PathBuf::from("/x/state/csharp-indexer"));
         }
         std::env::remove_var("ZAZZLE_INDEXER");
-        std::env::set_var("PATH", "/nonexistent-dir");
         assert_eq!(
-            Indexer::locate().unwrap_err(),
+            Indexer::locate_in(std::ffi::OsStr::new("/nonexistent-dir")).unwrap_err(),
             "csharp-indexer is not installed (beside the daemon or on PATH)"
         );
         for (k, v) in saved {
