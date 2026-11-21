@@ -683,9 +683,7 @@ mod tests {
         std::fs::create_dir_all(home.join(".claude")).expect("mkdir");
         std::fs::write(home.join(".claude/settings.json"), settings.to_string()).expect("write");
         let log = home.join("activity.log");
-        let _g = crate::testutil::env_lock();
-        let saved = std::env::var_os("ZAZZLE_ACTIVITY_LOG");
-        std::env::set_var("ZAZZLE_ACTIVITY_LOG", &log);
+        crate::activity::set_test_log(&log);
         crate::activity::record(json!({"src": "zazzle", "cmd": "read", "session": "s"}));
         crate::activity::record(json!({"src": "hook", "outcome": "native-edit", "program": "apply_patch"}));
         std::fs::write(env.config_path(Client::ClaudeCode), code.to_string()).expect("write");
@@ -761,7 +759,7 @@ mod tests {
         std::fs::create_dir_all(&plugin).expect("mkdir");
         std::fs::write(plugin.join(".mcp.json"), r#"{"mcpServers": {"pl": {"command": "x"}}}"#)
             .expect("write");
-        std::env::set_var("ZAZZLE_ACTIVITY_LOG", "");
+        crate::activity::set_test_log(Path::new(""));
         let r = run(&opts, &env).expect("run");
         assert!(r.contains("native edits refused); "), "{r}");
         assert!(
@@ -782,10 +780,6 @@ mod tests {
         let only = super::super::parse(&["--check".to_string(), "--client".to_string(), "codex".to_string()])
             .expect("parse");
         assert!(!run(&only, &env).expect("run").contains("claude-code:"));
-        match saved {
-            Some(v) => std::env::set_var("ZAZZLE_ACTIVITY_LOG", v),
-            None => std::env::remove_var("ZAZZLE_ACTIVITY_LOG"),
-        }
     }
 
     // Checks which folder each client starts servers in.

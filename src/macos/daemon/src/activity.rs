@@ -29,8 +29,23 @@ pub fn set_command_label(cmd: &[String]) {
     );
 }
 
+#[cfg(test)]
+thread_local! {
+    static TEST_LOG: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+// Points this test thread's log at a file (an empty path turns it off) without touching the process environment.
+#[cfg(test)]
+pub fn set_test_log(p: &Path) {
+    TEST_LOG.with(|t| *t.borrow_mut() = Some(p.to_path_buf()));
+}
+
 // Returns the log file: $ZAZZLE_ACTIVITY_LOG, else ~/.zazzle/activity.log; tests log nowhere unless they set the variable.
 pub fn path() -> Option<PathBuf> {
+    #[cfg(test)]
+    if let Some(p) = TEST_LOG.with(|t| t.borrow().clone()) {
+        return (!p.as_os_str().is_empty()).then_some(p);
+    }
     if let Some(p) = std::env::var_os("ZAZZLE_ACTIVITY_LOG") {
         return (!p.is_empty()).then(|| PathBuf::from(p));
     }
@@ -50,7 +65,7 @@ pub fn record(mut entry: Value) {
     let Some(p) = path() else { return };
     // Tests write only while their thread holds the environment lock, since the variable is process-wide.
     #[cfg(test)]
-    if !crate::testutil::env_held() {
+    if !crate::testutil::env_held() && !TEST_LOG.with(|t| t.borrow().is_some()) {
         return;
     }
     entry["ts"] = json!(now());
