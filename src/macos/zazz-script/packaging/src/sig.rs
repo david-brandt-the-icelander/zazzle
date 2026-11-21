@@ -59,7 +59,7 @@ pub fn unb64(s: &str) -> Result<Vec<u8>, String> {
         _ => None,
     };
     let bytes = s.as_bytes();
-    if bytes.len() % 4 != 0 {
+    if !bytes.len().is_multiple_of(4) {
         return Err("base64 length is not a multiple of 4".into());
     }
     let mut out = Vec::with_capacity(bytes.len() / 4 * 3);
