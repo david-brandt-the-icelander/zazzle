@@ -45,12 +45,12 @@
     {
       "id": "msrv",
       "title": "Builds with the workspace's minimum Rust",
-      "summary": "The crate compiles with Rust 1.85, the workspace's rust-version.",
+      "summary": "The crate compiles with Rust 1.89, the workspace's rust-version.",
       "criteria": [
-        "cargo check succeeds with the 1.85 toolchain"
+        "cargo check succeeds with the 1.89 toolchain"
       ],
       "checks": [
-        { "type": "automated", "command": "cargo check --workspace --exclude zazz-script-runner --locked", "description": "CI's msrv stage runs it with Rust 1.85." }
+        { "type": "automated", "command": "cargo check --workspace --exclude zazz-script-runner --locked", "description": "CI's msrv stage runs it with Rust 1.89." }
       ],
       "evidenceStatus": "source-verified",
       "sources": [

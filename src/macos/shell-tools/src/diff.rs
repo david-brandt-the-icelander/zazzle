@@ -15,13 +15,12 @@ const DIFF_TIMEOUT_MS: u64 = 250;
 pub fn hunks(old: &[u8], new: &[u8]) -> Option<Vec<Value>> {
     let (old, new) = (std::str::from_utf8(old).ok()?, std::str::from_utf8(new).ok()?);
     let diff = TextDiff::configure().timeout(Duration::from_millis(DIFF_TIMEOUT_MS)).diff_lines(old, new);
-    let new_lines = diff.new_slices();
     let mut out = Vec::new();
     for op in diff.ops().iter().filter(|op| op.tag() != DiffTag::Equal) {
         let (o, n) = (op.old_range(), op.new_range());
         let mut hunk = json!({"at": o.start + 1, "del": o.len(), "new_at": n.start + 1});
         if !n.is_empty() {
-            hunk["ins"] = Value::String(new_lines[n].concat());
+            hunk["ins"] = Value::String(n.filter_map(|i| diff.new_slice(i)).collect());
         }
         out.push(hunk);
     }

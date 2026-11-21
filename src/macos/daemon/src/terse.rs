@@ -478,7 +478,8 @@ fn statement_parent(n: Node, parent: Node, lang: Lang, src: &str) -> bool {
                 | "compound_statement"
                 | "do_clause"
         ),
-        Lang::PowerShell => parent.kind() == "statement_list",
+        // tree-sitter-go 0.25 wraps a block's statements in a statement_list, as PowerShell does.
+        Lang::PowerShell | Lang::Go => parent.kind() == "statement_list",
         Lang::VisualBasic | Lang::Pascal => n.kind() == "statement",
         Lang::Fortran => n.kind() == "subroutine_call",
         _ => false,

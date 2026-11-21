@@ -14,7 +14,7 @@
       "criteria": [
         "Every unit test in the crate passes; the tests build their WebAssembly from hand-written text (the wat dev-dependency).",
         "Branch coverage of the crate, test code excluded, is at least 95%.",
-        "The crate builds with its own rust-version; the rest of the workspace is checked on Rust 1.85 without it."
+        "The crate builds with its own rust-version; the rest of the workspace is checked on Rust 1.89 without it."
       ],
       "checks": [
         {
@@ -30,8 +30,8 @@
         },
         {
           "type": "automated",
-          "command": "cargo +1.85.0 check --workspace --exclude zazz-script-runner --locked",
-          "description": "CI's msrv stage checks the workspace on Rust 1.85 with zazz-script-runner excluded, since wasmtime needs a newer Rust."
+          "command": "cargo +1.89.0 check --workspace --exclude zazz-script-runner --locked",
+          "description": "CI's msrv stage checks the workspace on Rust 1.89 with zazz-script-runner excluded, since wasmtime needs a newer Rust."
         }
       ],
       "evidenceStatus": "source-verified",
