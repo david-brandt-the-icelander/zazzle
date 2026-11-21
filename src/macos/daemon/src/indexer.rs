@@ -43,9 +43,7 @@ fn find_exe(path: &std::ffi::OsStr) -> Option<PathBuf> {
         return Some(PathBuf::from(p));
     }
     let beside = std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.join(BINARY)));
-    let on_path = std::env::split_paths(path)
-        .map(|d| d.join(BINARY))
-        .collect::<Vec<_>>();
+    let on_path = std::env::split_paths(path).map(|d| d.join(BINARY)).collect::<Vec<_>>();
     beside.into_iter().chain(on_path).find(|p| p.is_file())
 }
 
