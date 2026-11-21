@@ -587,7 +587,7 @@ mod tests {
         assert!(
             matches!(probe_stdio("/bin/sh", &dies, &[], Path::new("/"), false), Outcome::Fail(t) if t.contains("stderr ends: oops"))
         );
-        let quiet = ["-c".to_string(), "exit 0".into()];
+        let quiet = ["-c".to_string(), "exec >&-; cat >/dev/null".into()];
         assert_eq!(
             probe_stdio("/bin/sh", &quiet, &[], Path::new("/"), false),
             Outcome::Fail("no answer in time".into())

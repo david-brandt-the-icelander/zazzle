@@ -1,13 +1,20 @@
 // Tests for `zazzle setup`: planning, applying and undoing across Claude Code, the Claude desktop app and Codex in a temporary home folder.
 use super::*;
 use crate::testutil::TempDir;
-use std::sync::Mutex;
+use std::cell::RefCell;
 
-static LAUNCHCTL: Mutex<Vec<String>> = Mutex::new(Vec::new());
+thread_local! {
+    static LAUNCHCTL: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+// Returns whether a launchctl call of this test's thread starts with a prefix.
+fn launched(prefix: &str) -> bool {
+    LAUNCHCTL.with(|l| l.borrow().iter().any(|c| c.starts_with(prefix)))
+}
 
 // Records launchctl calls instead of running launchctl.
 fn fake_launchctl(args: &[&str]) -> Result<(), String> {
-    LAUNCHCTL.lock().expect("lock").push(args.join(" "));
+    LAUNCHCTL.with(|l| l.borrow_mut().push(args.join(" ")));
     Ok(())
 }
 
@@ -142,7 +149,7 @@ fn test_apply_and_undo() {
     let t = TempDir::new();
     let env = env(&t, true);
     seed(&env);
-    LAUNCHCTL.lock().expect("lock").clear();
+    LAUNCHCTL.with(|l| l.borrow_mut().clear());
     let dev = t.path().join("dev");
     std::fs::create_dir_all(&dev).expect("mkdir");
     std::fs::create_dir_all(env.home.join(".zazzle")).expect("mkdir");
@@ -198,7 +205,7 @@ fn test_apply_and_undo() {
     );
     let routes = load_routes(&env);
     assert_eq!(routes.len(), 1);
-    assert!(LAUNCHCTL.lock().expect("lock").iter().any(|c| c.starts_with("bootstrap gui/501 ")));
+    assert!(launched("bootstrap gui/501 "));
     let plist = env.home.join(format!("Library/LaunchAgents/com.zazzle.proxy.{}.plist", routes[0].0));
     assert!(std::fs::read_to_string(plist).expect("plist").contains("<string>https://api/mcp</string>"));
 
@@ -305,11 +312,7 @@ fn test_apply_and_undo() {
     assert!(!env.codex_home.join("hooks.json").exists() && !env.codex_home.join("AGENTS.md").exists());
     assert_eq!(std::fs::read_to_string(crate::workspace::file(&env.home)).expect("ws"), "/mine\n");
     assert!(load_routes(&env).is_empty() && !env.state_path().exists());
-    assert!(LAUNCHCTL
-        .lock()
-        .expect("lock")
-        .iter()
-        .any(|c| c.starts_with("bootout gui/501/com.zazzle.proxy.")));
+    assert!(launched("bootout gui/501/com.zazzle.proxy."));
 }
 
 // Checks what happens off macOS, without the indexer, with --no-wrap, with a client named but not installed, and without --repo.
@@ -600,7 +603,7 @@ fn test_off_on_uninstall() {
     );
     assert_eq!(std::fs::read_to_string(env.config_path(Client::Codex)).expect("codex"), applied);
     assert!(std::fs::read_to_string(crate::workspace::file(&env.home)).expect("ws").contains("dev"));
-    LAUNCHCTL.lock().expect("lock").clear();
+    LAUNCHCTL.with(|l| l.borrow_mut().clear());
     let gone = run(&opts(&["--uninstall"]), &env).expect("uninstall");
     assert!(
         gone.contains("- removed zazzle")
@@ -608,7 +611,7 @@ fn test_off_on_uninstall() {
             && gone.contains("brew uninstall zazzle"),
         "{gone}"
     );
-    assert!(LAUNCHCTL.lock().expect("lock").iter().any(|c| c.starts_with("bootout gui/501/")));
+    assert!(launched("bootout gui/501/"));
     assert_eq!(std::fs::read_to_string(env.config_path(Client::Codex)).expect("codex"), before);
     assert!(run(&opts(&["--on"]), &env).is_err(), "uninstall forgets the setup");
     run(&opts(&["--apply", "--client", "codex"]), &env).expect("apply");

@@ -48,6 +48,11 @@ fn now() -> u64 {
 // Appends one entry with the time and, for a proxy, its server; failures are ignored, since logging must never break a command.
 pub fn record(mut entry: Value) {
     let Some(p) = path() else { return };
+    // Tests write only while their thread holds the environment lock, since the variable is process-wide.
+    #[cfg(test)]
+    if !crate::testutil::env_held() {
+        return;
+    }
     entry["ts"] = json!(now());
     if let Some(l) = LABEL.get() {
         entry["server"] = json!(l);

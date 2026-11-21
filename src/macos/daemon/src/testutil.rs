@@ -187,9 +187,30 @@ pub fn zazz_engine(t: &TempDir) -> crate::engine::Engine {
 
 static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-// Serialises tests that change process environment variables.
-pub fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-    ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+// Serialises tests that change process environment variables, and lets the holding thread (alone) write activity entries.
+pub fn env_lock() -> EnvGuard {
+    let g = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    HOLDING.with(|h| h.set(true));
+    EnvGuard(g)
+}
+
+// Returns whether this thread holds the environment lock, so other tests' commands never write into a log it set up.
+pub fn env_held() -> bool {
+    HOLDING.with(std::cell::Cell::get)
+}
+
+thread_local! {
+    static HOLDING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+// The environment lock, held until dropped.
+pub struct EnvGuard(#[allow(dead_code)] std::sync::MutexGuard<'static, ()>);
+
+impl Drop for EnvGuard {
+    // Stops this thread's activity writes before the lock is released.
+    fn drop(&mut self) {
+        HOLDING.with(|h| h.set(false));
+    }
 }
 
 // Writes an executable stand-in for ai-agent's worker: a ready line, then per request the answer of the first case whose pattern the request line contains (a JSON object as given, else the text), appending a line to NAME.starts at each start.
